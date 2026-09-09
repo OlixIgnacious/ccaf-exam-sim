@@ -94,9 +94,9 @@ kids.push(table(
   ["#", "Domain", "Weight", "≈ Questions"],
   [
     ["1", "Agentic Architecture & Orchestration", "27%", "16"],
-    ["2", "Claude Code Configuration & Workflows", "20%", "12"],
-    ["3", "Prompt Engineering & Structured Output", "20%", "12"],
-    ["4", "Tool Design & MCP Integration", "18%", "11"],
+    ["2", "Tool Design & MCP Integration", "18%", "11"],
+    ["3", "Claude Code Configuration & Workflows", "20%", "12"],
+    ["4", "Prompt Engineering & Structured Output", "20%", "12"],
     ["5", "Context Management & Reliability", "15%", "9"]
   ],
   [600, 5160, 1400, 2200]
@@ -134,8 +134,21 @@ kids.push(h2("Escalation to humans"));
 kids.push(bullet("Design explicit escalation criteria: low confidence, missing permissions/data, actions above a risk threshold (refunds over a limit, destructive operations), or the user asks for a human."));
 kids.push(bullet("Escalate with a summary of what was tried and gathered, so the human doesn't start from zero. First-contact-resolution targets never justify an agent guessing on a case it can't verify."));
 
+// ===== Domain 4 =====
+kids.push(h1("3. Domain 2 — Tool Design & MCP Integration (18%)"));
+kids.push(h2("Writing tools Claude can use correctly"));
+kids.push(bullet([b("Descriptions are prompts."), r(" Say what the tool does, when to use it, and when NOT to — especially for similar-sounding tools. Most tool-selection bugs are description bugs, not model bugs.")]));
+kids.push(bullet("Avoid overlapping tools; merge or sharply differentiate them. Fewer, well-named, well-scoped tools beat many ambiguous ones. Distribute tools across agents so each agent sees only what its role needs."));
+kids.push(bullet("Input schemas: descriptive parameter names, enums for closed sets, required vs. optional made deliberate. Return concise, high-signal results — huge payloads burn context."));
+kids.push(h2("Structured error responses"));
+kids.push(bullet([r("Return errors to the model as data it can act on: an "), code("errorCategory"), r(" (e.g. validation, not_found, rate_limit), an "), code("isRetryable"), r(" flag, and a human-readable message suggesting the fix. This lets the agent decide: retry, change inputs, try another tool, or escalate. Raising an unstructured exception (or hiding the failure) strands the loop.")]));
+kids.push(h2("MCP essentials"));
+kids.push(bullet([b("Primitives: tools"), r(" (model-invoked actions), "), b("resources"), r(" (application-controlled data/context), "), b("prompts"), r(" (user-invoked templates). Know which is which — 'expose read-only reference data' → resource, 'let the model act' → tool.")]));
+kids.push(bullet([b("Transports:"), r(" stdio for local/same-machine servers; streamable HTTP for remote/shared servers. Remote servers typically add OAuth-based auth.")]));
+kids.push(bullet("Advanced topics that appear: sampling (server asks the client's model for a completion), notifications (server-initiated updates), and keeping servers stateless for scale."));
+
 // ===== Domain 2 =====
-kids.push(h1("3. Domain 2 — Claude Code Configuration & Workflows (20%)"));
+kids.push(h1("4. Domain 3 — Claude Code Configuration & Workflows (20%)"));
 kids.push(h2("CLAUDE.md hierarchy"));
 kids.push(p("Memory files load in order, more specific overriding/adding to more general:"));
 kids.push(bullet([b("Enterprise policy"), r(" (managed, org-wide) → "), b("user level"), r(" ("), code("~/.claude/CLAUDE.md"), r(", personal, all projects) → "), b("project root"), r(" ("), code("CLAUDE.md"), r(", checked in, shared with the team) → "), b("subdirectory CLAUDE.md"), r(" (loaded when working in that subtree).")]));
@@ -154,7 +167,7 @@ kids.push(h2("MCP in Claude Code"));
 kids.push(bullet([code(".mcp.json"), r(" at the project root defines project-scoped MCP servers (shared with the team via version control); user scope makes a server available across your projects; local scope keeps it private to one project. Choose scope by who should get the server.")]));
 
 // ===== Domain 3 =====
-kids.push(h1("4. Domain 3 — Prompt Engineering & Structured Output (20%)"));
+kids.push(h1("5. Domain 4 — Prompt Engineering & Structured Output (20%)"));
 kids.push(h2("Prompting principles the exam rewards"));
 kids.push(bullet([b("Explicit criteria beat vague instructions."), r(" 'Flag SQL built by string concatenation with user input' outperforms 'be careful about security'. Wrong answers on the exam are usually the vague ones.")]));
 kids.push(bullet([b("Few-shot examples"), r(" are the highest-leverage fix for ambiguous or judgment-call cases (e.g. edge cases in classification) — show 2–3 worked examples including a tricky one.")]));
@@ -168,19 +181,6 @@ kids.push(h2("Batch processing"));
 kids.push(bullet([r("The "), b("Message Batches API"), r(" processes large asynchronous workloads (up to ~100k requests per batch, most complete within an hour, 24-hour window) at "), b("50% of standard token cost"), r(". Right answer whenever the scenario says 'thousands of documents, not latency-sensitive'. Real-time user interactions stay on the standard API.")]));
 kids.push(h2("Multi-pass architectures"));
 kids.push(bullet("For high-accuracy review/extraction: separate passes with narrow criteria (extract → validate → judge) beat one mega-prompt. A second 'reviewer' pass with explicit rubric cuts false positives."));
-
-// ===== Domain 4 =====
-kids.push(h1("5. Domain 4 — Tool Design & MCP Integration (18%)"));
-kids.push(h2("Writing tools Claude can use correctly"));
-kids.push(bullet([b("Descriptions are prompts."), r(" Say what the tool does, when to use it, and when NOT to — especially for similar-sounding tools. Most tool-selection bugs are description bugs, not model bugs.")]));
-kids.push(bullet("Avoid overlapping tools; merge or sharply differentiate them. Fewer, well-named, well-scoped tools beat many ambiguous ones. Distribute tools across agents so each agent sees only what its role needs."));
-kids.push(bullet("Input schemas: descriptive parameter names, enums for closed sets, required vs. optional made deliberate. Return concise, high-signal results — huge payloads burn context."));
-kids.push(h2("Structured error responses"));
-kids.push(bullet([r("Return errors to the model as data it can act on: an "), code("errorCategory"), r(" (e.g. validation, not_found, rate_limit), an "), code("isRetryable"), r(" flag, and a human-readable message suggesting the fix. This lets the agent decide: retry, change inputs, try another tool, or escalate. Raising an unstructured exception (or hiding the failure) strands the loop.")]));
-kids.push(h2("MCP essentials"));
-kids.push(bullet([b("Primitives: tools"), r(" (model-invoked actions), "), b("resources"), r(" (application-controlled data/context), "), b("prompts"), r(" (user-invoked templates). Know which is which — 'expose read-only reference data' → resource, 'let the model act' → tool.")]));
-kids.push(bullet([b("Transports:"), r(" stdio for local/same-machine servers; streamable HTTP for remote/shared servers. Remote servers typically add OAuth-based auth.")]));
-kids.push(bullet("Advanced topics that appear: sampling (server asks the client's model for a completion), notifications (server-initiated updates), and keeping servers stateless for scale."));
 
 // ===== Domain 5 =====
 kids.push(h1("6. Domain 5 — Context Management & Reliability (15%)"));
@@ -200,10 +200,10 @@ kids.push(p("All official prep is free on anthropic.skilljar.com (Anthropic Acad
 kids.push(table(
   ["Step", "Resource", "Maps to"],
   [
-    ["1", "Building with the Claude API", "Domains 3, 4 — tool use, structured output"],
-    ["2", "Intro to MCP + MCP: Advanced Topics", "Domain 4"],
-    ["3", "Claude Code 101 + Claude Code in Action", "Domain 2"],
-    ["4", "Introduction to Subagents / Agent Skills", "Domains 1, 2"],
+    ["1", "Building with the Claude API", "Domains 2, 4 — tool use, structured output"],
+    ["2", "Intro to MCP + MCP: Advanced Topics", "Domain 2"],
+    ["3", "Claude Code 101 + Claude Code in Action", "Domain 3"],
+    ["4", "Introduction to Subagents / Agent Skills", "Domains 1, 3"],
     ["5", "AI Capabilities and Limitations", "Domains 1, 5 — escalation, reliability"],
     ["6", "Official exam guide sample questions", "All — the authoritative scope document"]
   ],
@@ -306,6 +306,6 @@ const doc = new Document({
 });
 
 Packer.toBuffer(doc).then(buf => {
-  fs.writeFileSync("CCA-F_Study_Guide.docx", buf);
+  fs.writeFileSync(require("path").join(__dirname,"..","docs","CCA-F_Study_Guide.docx"), buf);
   console.log("written", buf.length);
 });
