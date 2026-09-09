@@ -1,0 +1,103 @@
+# CCA-F Exam Simulator
+
+A self-contained practice simulator for the **Claude Certified Architect – Foundations (CCA-F)**
+certification exam, plus a study guide covering all five exam domains.
+
+Single HTML file. No build step, no dependencies, no network calls, no tracking.
+
+---
+
+## What's here
+
+| Path | What it is |
+| --- | --- |
+| `index.html` | The simulator — 70 questions, self-contained |
+| `docs/CCA-F_Study_Guide.docx` | Study guide covering all five domains, exam logistics, and exam-day strategy |
+| `tools/make_guide.js` | Script that generates the study guide (`node tools/make_guide.js`, needs `npm i docx`) |
+| `DEPLOY.md` | How to host it — Netlify, Firebase, local network, or offline |
+| `firebase.json`, `.firebaserc` | Firebase Hosting config (set your project ID in `.firebaserc`) |
+
+## Run it
+
+Open `index.html` in any browser. That's the whole story.
+
+To serve it on your local network so phones and tablets can reach it:
+
+```bash
+python3 -m http.server 8000
+# then visit http://<your-lan-ip>:8000 from any device on the same Wi-Fi
+```
+
+See [DEPLOY.md](DEPLOY.md) for hosting options and for adding it to a mobile home screen.
+
+---
+
+## The simulator
+
+**Four modes**
+
+- **Exam simulation** — 25 questions, 50 minutes, domain-weighted to the real blueprint. No feedback until submission. Flag questions and jump between them with the navigator grid.
+- **Full mock** — all 70 questions, 140 minutes.
+- **Quick drill** — 10 questions, untimed, explanation after each answer.
+- **Domain drill** — every question from one chosen domain.
+
+**Question formats**
+
+Both formats the real exam uses:
+
+- Single-answer multiple choice
+- Multiple response, which states how many options to select and is **partially graded** —
+  scored as `(correct − incorrect) ÷ required`, floored at zero, so selecting everything earns nothing
+
+**Scoring**
+
+Scaled 100–1000 against the real 720 pass mark, with a per-domain breakdown and a review of
+every missed or partially-scored question. Option order is shuffled on each attempt so you
+can't pattern-match answer positions. Attempt history persists in `localStorage`
+(per-device — it does not sync between your phone and laptop).
+
+**Domain coverage** follows the published exam blueprint:
+
+| Domain | Weight |
+| --- | --- |
+| 1. Agentic Architecture & Orchestration | 27% |
+| 2. Claude Code Configuration & Workflows | 20% |
+| 3. Prompt Engineering & Structured Output | 20% |
+| 4. Tool Design & MCP Integration | 18% |
+| 5. Context Management & Reliability | 15% |
+
+---
+
+## About the exam
+
+60 scenario-based questions in 120 minutes, scored 100–1000 with **720 to pass**. Four scenarios
+are drawn at random from a pool of six. Delivered by Pearson VUE, online-proctored or at a test
+centre; closed book.
+
+Currently open only to people at **Claude Partner Network** organizations, and registration
+requires a company email on a recognized partner domain. $125 per attempt.
+
+Full logistics — retake waiting periods, 12-month validity, ID requirements, and the
+things that will get you turned away at check-in — are in the study guide.
+
+---
+
+## Sources and attribution
+
+Questions are a mix of original items written against the published exam blueprint and items
+adapted from community study material, principally:
+
+- [paullarionov/claude-certified-architect](https://github.com/paullarionov/claude-certified-architect)
+- [daronyondem/claude-architect-exam-guide](https://github.com/daronyondem/claude-architect-exam-guide) (CC BY 4.0)
+
+Exam-day guidance draws on published first-hand accounts from candidates who passed.
+
+**This repository contains no real exam content.** Nothing here is sourced from braindump
+sites or leaked question banks — using those violates the certification candidate agreement
+and can get a credential revoked.
+
+Not affiliated with, endorsed by, or sponsored by Anthropic.
+
+> **Before making this repository public:** confirm the licence terms of any upstream material
+> you've adapted. Not every community repo declares a licence, and content without one is
+> "all rights reserved" by default.
