@@ -457,7 +457,13 @@ function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 
 function weightedDraw(n){
   const byDom={};BANK.forEach((q,i)=>{(byDom[q.d]=byDom[q.d]||[]).push(i);});
-  for(const d in byDom)shuffle(byDom[d]);
+  const seen=new Set(getSeen());
+  for(const d in byDom){
+    const pool=byDom[d];
+    const fresh=shuffle(pool.filter(i=>!seen.has(i)));
+    const used=shuffle(pool.filter(i=>seen.has(i)));
+    byDom[d]=fresh.concat(used);   // fresh questions first
+  }
   // largest-remainder apportionment so the rounding remainder is spread fairly,
   // not always subtracted from domain 1
   const raw=[],counts={};let floorSum=0;
@@ -481,6 +487,9 @@ function weightedDraw(n){
   return shuffle(take.slice(0,n));
 }
 
+function getSeen(){try{return JSON.parse(localStorage.getItem('ccaf_seen')||'[]');}catch(e){return[];}}
+function saveSeen(ids){try{const prev=getSeen().filter(i=>!ids.includes(i));localStorage.setItem('ccaf_seen',JSON.stringify(prev.concat(ids).slice(-140)));}catch(e){}}
+function resetSeen(){try{localStorage.removeItem('ccaf_seen');}catch(e){}}
 function getHist(){try{return JSON.parse(localStorage.getItem('ccaf_hist')||'[]');}catch(e){return[];}}
 function saveHist(h){try{localStorage.setItem('ccaf_hist',JSON.stringify(h.slice(-12)));}catch(e){}}
 
@@ -490,20 +499,23 @@ function home(){
   app.innerHTML=`
     <h1>CCA-F <span>Exam Simulator</span></h1>
     <div class="sub">Claude Certified Architect – Foundations · 107-question bank in the real exam's scenario style, mixing single-answer and multiple-response items (partial credit, as the real exam uses). Real exam: 60 Q / 120 min / 720‑of‑1000 to pass (≈72%).</div>
-    <button class="mode" onclick="startMode('exam')"><b>Exam simulation — 25 questions, 50 min</b><span>Timed, no feedback until the end, flag &amp; navigate between questions. Domain-weighted like the real blueprint.</span></button>
+    <button class="mode" onclick="startMode('spec')"><b>Full mock — 60 questions, 120 min (real exam shape)</b><span>Exactly the real format and pacing. Draws unseen questions first, so consecutive mocks overlap as little as the bank allows.</span></button>
+    <button class="mode" onclick="startMode('exam')"><b>Half mock — 25 questions, 50 min</b><span>Timed, no feedback until the end, flag &amp; navigate between questions. Domain-weighted like the real blueprint.</span></button>
     <button class="mode" onclick="startMode('full')"><b>Full mock — all 107 questions, 214 min</b><span>The entire bank under exam conditions.</span></button>
     <button class="mode" onclick="startMode('quick')"><b>Quick drill — 10 questions, untimed</b><span>Instant feedback with explanations after each answer.</span></button>
     <div style="display:flex;gap:10px;align-items:center;margin:4px 0 2px">
       <select id="domSel">${Object.entries(DOMAINS).map(([d,n])=>`<option value="${d}">D${d} · ${n}</option>`).join("")}</select>
       <button class="btn ghost" onclick="startMode('domain')">Drill this domain</button>
     </div>
+    <div style="margin:10px 0 2px;font-size:.8rem;color:var(--muted)">${getSeen().length} of 107 questions used in recent mocks · <a href="#" onclick="resetSeen();home();return false" style="color:var(--accent)">reset</a></div>
     ${hist.length?`<div class="hist"><h2 style="margin-top:0">Attempt history</h2><table><tr><th>Date</th><th>Mode</th><th>Score</th><th>Scaled</th><th></th></tr>${hist.map(h=>`<tr><td>${h.t}</td><td>${h.m}</td><td>${h.r}/${h.n}</td><td>${h.s}</td><td><span class="pill ${h.s>=720?'p':'f'}">${h.s>=720?'PASS':'FAIL'}</span></td></tr>`).join("")}</table></div>`:""}
     <div class="foot">Questions adapted from the community <a href="https://github.com/paullarionov/claude-certified-architect" target="_blank">claude-certified-architect</a> study repo plus original items aligned to the official exam guide domains and to published candidate exam reports. Multiple-response items use partial credit, which passing candidates report the real exam applies. Not affiliated with Anthropic; contains no actual exam content.</div>`;
 }
 
 function startMode(m){
   mode=m;idx=0;answers=[];flags=new Set();revealed=new Set();
-  if(m==='exam'){order=weightedDraw(25);deadline=Date.now()+50*60*1000;}
+  if(m==='spec'){order=weightedDraw(60);deadline=Date.now()+120*60*1000;}
+  else if(m==='exam'){order=weightedDraw(25);deadline=Date.now()+50*60*1000;}
   else if(m==='full'){order=shuffle([...BANK.keys()]);deadline=Date.now()+214*60*1000;}
   else if(m==='quick'){order=weightedDraw(10);deadline=null;}
   else{drillDom=+document.getElementById('domSel').value;order=shuffle(BANK.map((q,i)=>q.d===drillDom?i:-1).filter(i=>i>=0));deadline=null;}
@@ -521,7 +533,7 @@ function updateTimer(){
   el.classList.toggle('low',ms<5*60*1000);
   if(ms<=0){clearInterval(tick);results(true);}
 }
-const isExam=()=>mode==='exam'||mode==='full';
+const isExam=()=>mode==='spec'||mode==='exam'||mode==='full';
 const isMR=q=>Array.isArray(q.m);
 function answered(i){const a=answers[i];return Array.isArray(a)?a.length>0:a!==null;}
 // partial credit: (correct picks − wrong picks) / required, floored at 0
@@ -604,7 +616,8 @@ function results(timedOut){
   });
   const fmt=x=>Number.isInteger(x)?x:x.toFixed(1);
   const pct=Math.round(right/n*100),scaled=Math.round(100+(right/n)*900),pass=scaled>=720;
-  const label=mode==='exam'?'Exam 25':mode==='full'?'Full 50':mode==='quick'?'Quick 10':'Drill D'+drillDom;
+  if(mode==='spec'||mode==='exam')saveSeen(order.slice());
+  const label=mode==='spec'?'Mock 60':mode==='exam'?'Exam 25':mode==='full'?'Full '+B:mode==='quick'?'Quick 10':'Drill D'+drillDom;
   if(mode!=='domain'){const h=getHist();h.push({t:new Date().toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}),m:label,r:fmt(right),n,s:scaled});saveHist(h);}
   const show=(q,pick)=>{
     if(pick===null||pick===undefined||(Array.isArray(pick)&&!pick.length))return '— (unanswered)';
