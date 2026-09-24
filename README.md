@@ -36,12 +36,17 @@ See [DEPLOY.md](DEPLOY.md) for hosting options and for adding it to a mobile hom
 
 ## The simulator
 
-**Four modes**
+**Five modes**
 
-- **Exam simulation** — 25 questions, 50 minutes, domain-weighted to the real blueprint. No feedback until submission. Flag questions and jump between them with the navigator grid.
-- **Full mock** — all 107 questions, 214 minutes.
+- **Full mock** — 60 questions in 120 minutes, the real exam's shape and pacing. Domain-weighted to the blueprint, no feedback until submission, flag questions and jump between them with the navigator grid.
+- **Half mock** — 25 questions, 50 minutes, same format in half the time.
+- **Marathon** — all 107 questions, 214 minutes.
 - **Quick drill** — 10 questions, untimed, explanation after each answer.
 - **Domain drill** — every question from one chosen domain.
+
+Mocks draw unseen questions first, so back-to-back attempts overlap as little as the bank
+allows (13 of 60 between the first two). The home screen tracks how much of the bank you've
+consumed, with a reset.
 
 **Question formats**
 
@@ -103,6 +108,8 @@ and can get a credential revoked.
 
 Not affiliated with, endorsed by, or sponsored by Anthropic.
 
-> **Before making this repository public:** confirm the licence terms of any upstream material
-> you've adapted. Not every community repo declares a licence, and content without one is
-> "all rights reserved" by default.
+The majority of the bank is original. A minority of items were adapted from the community
+material above; `daronyondem` is CC BY 4.0 and is attributed accordingly, while
+`paullarionov` declares no licence, which by default means all rights reserved. If you are
+the author of anything here and would like it removed or attributed differently, open an
+issue and it will be handled promptly.
