@@ -11,10 +11,12 @@ Single HTML file. No build step, no dependencies, no network calls, no tracking.
 
 | Path | What it is |
 | --- | --- |
-| `index.html` | The simulator — 70 questions, self-contained |
+| `index.html` | The simulator — 107 questions, self-contained |
 | `docs/CCA-F_Study_Guide.docx` | Study guide covering all five domains, exam logistics, and exam-day strategy |
+| `CHEATSHEET.md` | Last-minute cram sheet — decision rules, per-domain reference, distractor patterns |
 | `tools/make_guide.js` | Script that generates the study guide (`node tools/make_guide.js`, needs `npm i docx`) |
 | `DEPLOY.md` | How to host it — Netlify, Firebase, local network, or offline |
+| `PUSH-TO-GITHUB.md` | Creating the remote and pushing |
 | `firebase.json`, `.firebaserc` | Firebase Hosting config (set your project ID in `.firebaserc`) |
 
 ## Run it
@@ -37,7 +39,7 @@ See [DEPLOY.md](DEPLOY.md) for hosting options and for adding it to a mobile hom
 **Four modes**
 
 - **Exam simulation** — 25 questions, 50 minutes, domain-weighted to the real blueprint. No feedback until submission. Flag questions and jump between them with the navigator grid.
-- **Full mock** — all 70 questions, 140 minutes.
+- **Full mock** — all 107 questions, 214 minutes.
 - **Quick drill** — 10 questions, untimed, explanation after each answer.
 - **Domain drill** — every question from one chosen domain.
 
@@ -58,13 +60,16 @@ can't pattern-match answer positions. Attempt history persists in `localStorage`
 
 **Domain coverage** follows the published exam blueprint:
 
-| Domain | Weight |
-| --- | --- |
-| 1. Agentic Architecture & Orchestration | 27% |
-| 2. Claude Code Configuration & Workflows | 20% |
-| 3. Prompt Engineering & Structured Output | 20% |
-| 4. Tool Design & MCP Integration | 18% |
-| 5. Context Management & Reliability | 15% |
+| Domain | Weight | Questions |
+| --- | --- | --- |
+| 1. Agentic Architecture & Orchestration | 27% | 28 |
+| 2. Tool Design & MCP Integration | 18% | 20 |
+| 3. Claude Code Configuration & Workflows | 20% | 21 |
+| 4. Prompt Engineering & Structured Output | 20% | 20 |
+| 5. Context Management & Reliability | 15% | 18 |
+
+Domain numbers follow the official blueprint order — they are *not* sorted by weight.
+All 30 published task statements have question coverage.
 
 ---
 

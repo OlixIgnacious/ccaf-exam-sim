@@ -326,7 +326,126 @@ o:["Identifiers for the customer and the issue","What the agent verified and whi
 m:[0,1,2],e:"The human needs to continue, not re-read. Identifiers, verified facts, attempted actions, and the blocking reason do that; full reasoning traces and raw transcripts bury the signal."},
 {s:CG,d:3,q:"Which situations favor plan mode over direct execution?",
 o:["A refactor spanning many files where several approaches are viable","Working in an unfamiliar codebase where dependencies aren't yet understood","Fixing a typo in a single comment","Renaming one clearly-scoped local variable","A change risky enough that you want to review the approach before any edits land"],
-m:[0,1,4],e:"Plan mode earns its cost on large, ambiguous, or risky work. Applying it to trivial well-understood edits wastes time and tokens."}
+m:[0,1,4],e:"Plan mode earns its cost on large, ambiguous, or risky work. Applying it to trivial well-understood edits wastes time and tokens."},
+
+// ===== Domain 1 additions — Agentic Architecture & Orchestration =====
+{s:CS,d:1,q:"An agent has been looping on the same ticket for 40 tool calls, alternating between two lookups without converging. What should the harness have in place?",
+o:["A larger context window so it can hold more history","Explicit stopping conditions — max turns, budget, or no-progress detection — that halt the loop and escalate","A prompt instruction telling the agent not to loop","Automatic restart of the agent from the beginning"],
+a:1,e:"The model decides the next step; the harness enforces termination. Stopping conditions are infrastructure, not prompt guidance, and a restart just repeats the loop."},
+{s:DP,d:1,q:"Your agent completes tasks but frequently reports success on work that is subtly wrong. Which part of the agentic loop is underbuilt?",
+o:["Context gathering — it needs more input up front","The verification step — the loop acts and moves on without checking its own output against a testable criterion","Tool selection — it should have fewer tools","The system prompt should ask for more confidence"],
+a:1,e:"Gather → act → verify → repeat. Skipping verification is the classic cause of confidently wrong completions; a checkable criterion (tests pass, schema validates, diff reviewed) closes the loop."},
+{s:MA,d:1,q:"A coordinator must produce a report combining three independent research areas. Latency matters. What's the right execution shape?",
+o:["Spawn the three subagents in parallel in a single turn, then synthesize when all return","Run them strictly sequentially so each can build on the last","Run one subagent and have it handle all three areas","Alternate between them turn by turn"],
+a:0,e:"Independent subtasks parallelize — that's the main latency argument for multi-agent. Sequencing only helps when a later step genuinely depends on an earlier result."},
+{s:MA,d:1,q:"Your orchestrator passes each subagent the full conversation history so far, believing more context helps. Results get slower and less focused. Why?",
+o:["Subagents cannot read conversation history","Irrelevant context dilutes attention and inflates cost; a subagent needs a bounded brief, not the whole transcript","History must be compressed with gzip first","The orchestrator should use a larger model instead"],
+a:1,e:"Context isolation is a feature of the pattern, not a limitation. Scope each brief to the objective, output format, and the facts that worker actually needs."},
+{s:MA,d:1,q:"A subagent returns a 12,000-token narrative of everything it explored. The orchestrator now has little room to synthesize. The fix is to:",
+o:["Increase the orchestrator's max_tokens","Specify a structured, bounded return format in the brief — findings, sources, confidence — rather than an open-ended write-up","Have the orchestrator summarize the narrative itself","Run the subagent again with a shorter timeout"],
+a:1,e:"Constrain the return contract at delegation time. Summarizing after the fact has already spent the orchestrator's context, and output limits don't govern what a worker chooses to write."},
+{s:CS,d:1,q:"A refund workflow must always verify identity, then check policy, then act — in that order, every time. Where does that sequence belong?",
+o:["In the system prompt, described clearly","Enforced in code as preconditions, so a later step cannot execute before its prerequisite has succeeded","As few-shot examples showing the correct order","In the tool descriptions for each step"],
+a:1,e:"A hard ordering requirement is business logic. Code gives a deterministic guarantee; prompts and examples raise the probability but cannot ensure it on the attempt that matters."},
+{s:CS,d:1,q:"When a support agent hands a case to a specialist billing agent, what makes the handoff reliable?",
+o:["A defined contract: structured state the receiving agent expects, with required fields validated before transfer","Forwarding the raw chat transcript","Letting the billing agent re-ask the customer for everything","A longer system prompt on the receiving side"],
+a:0,e:"Handoffs between agents are interfaces. An explicit, validated payload prevents the receiver from starting blind or re-interrogating the customer."},
+{s:DX,d:1,q:"You need to block any tool call that would write to a production table during a dry-run job. Using the Agent SDK, the correct mechanism is:",
+o:["A PostToolUse hook that reverts the write afterwards","A PreToolUse hook that inspects the call and blocks it before execution","A system prompt line saying 'this is a dry run'","Removing the tool and hoping nothing needs it"],
+a:1,e:"PreToolUse intercepts before the side effect happens. PostToolUse runs after the write has already landed, and reverting is not always possible."},
+{s:MA,d:1,q:"Tool results arriving from three different MCP servers use inconsistent field names for the same entity. You want one canonical shape before they reach the model. The cleanest hook is:",
+o:["PreToolUse, rewriting the request","PostToolUse, normalizing each result as it returns","A separate cleanup agent invoked at the end","Editing each upstream MCP server"],
+a:1,e:"PostToolUse transforms results on the way back — a single deterministic normalization point. Upstream servers are often third-party and not yours to change."},
+{s:MA,d:1,q:"A research task is described as 'assess the competitive landscape'. The coordinator must decompose it. What most reduces the risk of blind spots?",
+o:["Assign one subagent per known competitor","Enumerate the dimensions of the question first (players, pricing, positioning, regulation, trends), then assign coverage against that map","Give every subagent the same broad prompt and deduplicate later","Increase the number of subagents"],
+a:1,e:"Coverage is bounded by the decomposition. Mapping dimensions before delegating is what prevents a report that is thorough about the parts someone happened to name."},
+{s:CG,d:1,q:"You want to try a risky migration path from the current session state while keeping the original thread available to fall back to. You should:",
+o:["Fork the session — the branch inherits context and diverges, leaving the original intact","Resume the session with --resume","Run /compact and continue","Start a fresh session and re-explain the context"],
+a:0,e:"Forking branches from current state while preserving the original. Resuming continues the same timeline; a fresh session discards the context you wanted to keep."},
+{s:CI,d:1,q:"A nightly pipeline must continue an analysis begun by an earlier job. The mechanism is:",
+o:["Nothing — Claude Code remembers prior runs automatically","Capture the session id from the first run and pass it to --resume in the second","Rely on CLAUDE.md to carry the state","Use the same working directory"],
+a:1,e:"Headless invocations are isolated by default. Continuity requires explicitly resuming the session id or piping the first run's structured output into the second."},
+{s:DP,d:1,q:"An agent crashes three hours into a long migration. On restart it begins again from scratch. What was missing?",
+o:["A bigger context window","Checkpointed state persisted to durable storage after each completed unit of work","More aggressive prompt caching","A longer max-turns limit"],
+a:1,e:"Nothing in the context window survives process death. Durable per-step checkpoints let a restart resume rather than redo."},
+{s:MA,d:1,q:"Which elements must a subagent brief contain for the worker to succeed without access to the orchestrator's context?",
+o:["A single clear objective","The expected output format","Guidance on which tools to use and how much effort to spend","The full conversation transcript so far","The other subagents' in-progress findings","The orchestrator's system prompt verbatim"],
+m:[0,1,2],e:"Objective, output contract, and effort/tool guidance are what a context-isolated worker needs. Transcripts and sibling state defeat the isolation that makes the pattern worth using."},
+{s:DP,d:1,q:"Which conditions should cause an agentic loop to terminate rather than continue?",
+o:["A maximum turn or token budget has been reached","The agent has made no measurable progress across several iterations","A required action exceeds the agent's authorization","The current tool returned an unexpected field name","The task has taken more than one minute"],
+m:[0,1,2],e:"Budget exhaustion, non-convergence, and hitting an authority boundary are legitimate halts. An unexpected field is a parsing concern, and wall-clock time alone says nothing about progress."},
+
+// ===== Domain 2 additions — Tool Design & MCP Integration =====
+{s:DP,d:2,q:"Two tools, `search_docs` and `query_knowledge_base`, are each described as 'finds relevant information'. Claude picks between them inconsistently. The first fix is:",
+o:["Add a routing classifier ahead of the agent","Rewrite both descriptions to state the distinct data each covers and when to prefer one over the other","Merge them into a single tool regardless of their backends","Reorder them in the tool array"],
+a:1,e:"Selection is driven by the descriptions. Make the boundary explicit before adding machinery; merging may be right later but is a bigger change than the problem requires."},
+{s:DX,d:2,q:"A tool takes a `status` argument that must be one of four values, but the model keeps inventing variants like 'in-progress' and 'Pending'. The schema fix is:",
+o:["Add the valid values to the tool description prose","Define the parameter as an enum in the input schema so invalid values fail validation","Lowercase the value after it arrives","Ask for the status in a separate follow-up call"],
+a:1,e:"Enums constrain at the schema level, which is enforceable. Prose in a description is guidance the model can drift from, and post-hoc correction hides the ambiguity."},
+{s:CS,d:2,q:"Your MCP tool receives a customer ID that doesn't exist. The most useful response to the model is:",
+o:["Raise an exception so the framework surfaces a stack trace","Return isError: true with a message naming the missing ID and suggesting a lookup by email","Return an empty customer object with isError: false","Return the nearest matching customer instead"],
+a:1,e:"Business-level failures come back as errors the model can reason about, with a suggested next action. Fake successes and fuzzy substitutions silently corrupt everything downstream."},
+{s:MA,d:2,q:"An upstream API is briefly unavailable. Your MCP tool should communicate this so the agent behaves sensibly. The response should signal:",
+o:["That the error is retryable, with a category indicating a transient upstream failure","That the request was invalid","That no data exists for the query","Nothing — let the call hang until the API recovers"],
+a:0,e:"Retryability is the field that changes the agent's next move. Mislabelling a transient outage as invalid input or empty data causes the agent to give up or report a false negative."},
+{s:DX,d:2,q:"An extraction agent must always return data through your `record_extraction` tool and never reply in prose. You should:",
+o:["Set tool_choice to auto and describe the requirement in the prompt","Set tool_choice to force that specific tool","Remove the model's ability to produce text","Validate the prose output and re-prompt if it isn't JSON"],
+a:1,e:"Forcing a named tool guarantees the call. auto leaves it to judgment, and validating prose afterwards is a workaround for a constraint you can set directly."},
+{s:MA,d:2,q:"A summarization subagent has been given the full toolset including `delete_record` and `send_email`, which it never needs. The concern is:",
+o:["Nothing — unused tools are harmless","Unnecessary capability is both a selection-accuracy problem and a blast-radius problem; scope the toolset to the role","It slows down JSON parsing","The tools will expire if unused"],
+a:1,e:"A larger surface means more chances to pick wrong and more damage when it does. Least privilege applies to agents as much as to users."},
+{s:DP,d:2,q:"Your team's internal MCP server should be available to everyone who clones the repo, with its config reviewed like code. You configure it:",
+o:["In each developer's user-scope MCP settings","In project-scope .mcp.json, committed to the repository","In a shared document with setup instructions","Directly in CI environment variables only"],
+a:1,e:"Project scope ships with the repo — versioned, reviewable, automatic for the whole team. User scope is personal and cross-project by design."},
+{s:DP,d:2,q:"Your MCP server needs to ask the calling client's model to summarize a document mid-operation, without shipping its own model. The MCP feature is:",
+o:["Resources","Sampling","Notifications","Prompts"],
+a:1,e:"Sampling lets a server request a completion from the client's model. Resources expose data, prompts are user-invoked templates, notifications are server-initiated updates."},
+{s:DP,d:2,q:"An agent must locate every call site of a deprecated function across a large repository, then read only the relevant files. The efficient tool sequence is:",
+o:["Read every file under src/ in turn","Grep for the symbol to get candidate paths, then Read only those files","Bash `cat` the repository into context","Glob all filenames and Read each match"],
+a:1,e:"Search narrows cheaply; reading is what costs context. Glob matches paths, not contents, so it can't find call sites on its own."},
+{s:MA,d:2,q:"Which practices meaningfully improve tool-selection accuracy in a production agent?",
+o:["Descriptions that state both when to use a tool and when not to","Distinct, non-overlapping names for tools with adjacent purposes","Scoping each agent's toolset to what its role requires","Adding many narrow tools so one always matches exactly","Shortening descriptions to conserve context tokens"],
+m:[0,1,2],e:"Clear boundaries, differentiation, and role scoping all shrink the decision space. Tool proliferation widens it, and descriptions are the primary selection signal — never trim them for tokens."},
+{s:DP,d:2,q:"Which statements about MCP transports and scope are correct?",
+o:["stdio suits a local server running on the same machine as the client","Streamable HTTP suits a remote server shared across a team, typically with OAuth","Project-scope .mcp.json is committed and shared with everyone who clones the repo","stdio is preferred for remote multi-tenant servers because it is faster","User-scope servers are automatically available to your teammates"],
+m:[0,1,2],e:"stdio is local, streamable HTTP is remote/shared, project scope ships in the repo. stdio cannot span machines, and user scope follows you — not your team."},
+
+// ===== Domain 3 additions — Claude Code Configuration & Workflows =====
+{s:CG,d:3,q:"Your root CLAUDE.md has grown to several hundred lines of API notes, schema documentation, and deployment steps, and every session now starts slowly. The right restructuring is:",
+o:["Delete everything except coding standards","Split the detail into separate files and pull them in with @path imports, keeping the always-loaded core small","Move the whole file to user scope","Duplicate the content into each subdirectory"],
+a:1,e:"@path imports keep reference material reachable without loading it into every session. Deleting loses the knowledge; user scope is the wrong scope for project facts."},
+{s:CG,d:3,q:"You want a `/deploy-check` command available to your whole team, taking an environment name as an argument. You create it:",
+o:["As a Markdown file in .claude/commands/ in the repo, using $ARGUMENTS for the environment","In ~/.claude/commands/ so it's always available to you","As a section in the root CLAUDE.md","As a skill with context: fork"],
+a:0,e:"Project commands live in .claude/commands/, are version-controlled, and reach everyone who clones. $ARGUMENTS injects what the user typed after the command."},
+{s:CG,d:3,q:"A skill should analyze large build logs without consuming the main session's context, and must be prevented from modifying files. Its frontmatter needs:",
+o:["context: fork together with an allowed-tools list limited to read-only tools","Only a name and description — skills are sandboxed by default","model: haiku and a short description","A path glob restricting it to the logs directory"],
+a:0,e:"Forking runs the skill in a subagent so its heavy reading stays isolated; allowed-tools restricts capability. Neither protection applies unless you declare it."},
+{s:CG,d:3,q:"Frontend files must use design tokens, backend files must use a specific error-wrapping helper, and the two rules must never bleed into each other. The mechanism is:",
+o:["Both rules in the root CLAUDE.md with instructions about when each applies","Separate files in .claude/rules/ with frontmatter globs scoping each to its paths","A skill the developer invokes before editing","A CLAUDE.md inside each of the two directories"],
+a:1,e:"Path-scoped rules attach automatically to matching files, so the right convention loads without the model inferring which applies. Root-level instructions rely on that inference and cost context on every task."},
+{s:CG,d:3,q:"Claude Code produced a working but poorly structured implementation. You want to improve it without losing what already works. The most effective next step is:",
+o:["Start over with a more detailed initial prompt","Iterate on the working version with specific, targeted refinements — naming, decomposition, error handling — one concern at a time","Ask it to 'make the code better'","Switch to plan mode and regenerate from scratch"],
+a:1,e:"Progressive refinement against working code preserves value and keeps each change reviewable. Regenerating discards a correct baseline, and a vague improvement request produces unfocused edits."},
+{s:CG,d:3,q:"During a long feature session the conversation has filled with dead-end exploration and responses are degrading, but the task is half finished. You should:",
+o:["Run /compact at a natural boundary so decisions and current state survive while stale exploration is dropped","Start a new session and re-explain everything","Keep going and hope quality recovers","Paste the transcript back in as a single message"],
+a:0,e:"Compaction reclaims context while preserving decisions, constraints, and open items. A new session discards the state you need; re-pasting re-spends the context you just freed."},
+{s:CI,d:3,q:"Which statements about running Claude Code non-interactively in CI are correct?",
+o:["-p (or --print) processes the prompt, writes to stdout, and exits","--output-format json yields machine-parseable results a later step can consume","Each invocation is a fresh session unless you explicitly resume one","Setting CLAUDE_HEADLESS=true enables non-interactive mode","Sessions in the same pipeline automatically share context"],
+m:[0,1,2],e:"-p is the documented non-interactive flag, JSON output makes results parseable, and isolation is the default. CLAUDE_HEADLESS does not exist, and nothing is shared between invocations implicitly."},
+
+// ===== Domain 4 additions — Prompt Engineering & Structured Output =====
+{s:CI,d:4,q:"A triage prompt says 'classify by severity'. Output is inconsistent — the same defect lands in different buckets across runs. The strongest fix is:",
+o:["Ask the model to explain its reasoning before classifying","Define each severity level with concrete, testable conditions, and show a worked example for the boundary cases","Raise the reasoning budget","Run it three times and take the majority"],
+a:1,e:"Inconsistency across identical inputs signals undefined boundaries. Explicit level definitions plus boundary examples fix the cause; voting just averages an ambiguous rubric."},
+{s:DX,d:4,q:"Extracted records pass JSON Schema validation but occasionally contain a shipping date earlier than the order date. This shows that:",
+o:["The schema needs stricter type definitions","Schema validation covers structure, not meaning — cross-field business rules need a separate validation pass","The model needs a lower temperature","Dates should be stored as strings"],
+a:1,e:"A syntactically valid record can be semantically impossible. Production extraction layers business-rule checks on top of schema conformance."},
+{s:DX,d:4,q:"You must process 30,000 archived documents by end of week, at minimum cost, with no tool calls during processing. The right approach is:",
+o:["Standard API calls with high concurrency","The Message Batches API, correlating results by custom_id","One request containing all documents","Streaming responses to reduce latency"],
+a:1,e:"Bulk, latency-tolerant, single-shot work is exactly the batch case, and custom_id is how you map results back since order isn't guaranteed. Latency features are irrelevant to an archive job."},
+{s:CI,d:4,q:"A single prompt asks Claude to find bugs, assess style, check test coverage, and suggest refactors in one pass. Quality is uneven across all four. The restructuring is:",
+o:["Separate passes with one narrow objective each, combined afterwards","A longer prompt with clearer section headings","A model with a larger context window","Ask for the four concerns in a fixed output order"],
+a:0,e:"Four objectives in one pass dilute attention across all of them. Specialized passes give consistent depth per concern; formatting and context size don't address the split focus."}
 ];
 
 const letters=["A","B","C","D"];
@@ -370,9 +489,9 @@ function home(){
   const hist=getHist().slice().reverse();
   app.innerHTML=`
     <h1>CCA-F <span>Exam Simulator</span></h1>
-    <div class="sub">Claude Certified Architect – Foundations · 70-question bank in the real exam's scenario style, mixing single-answer and multiple-response items (partial credit, as the real exam uses). Real exam: 60 Q / 120 min / 720‑of‑1000 to pass (≈72%).</div>
+    <div class="sub">Claude Certified Architect – Foundations · 107-question bank in the real exam's scenario style, mixing single-answer and multiple-response items (partial credit, as the real exam uses). Real exam: 60 Q / 120 min / 720‑of‑1000 to pass (≈72%).</div>
     <button class="mode" onclick="startMode('exam')"><b>Exam simulation — 25 questions, 50 min</b><span>Timed, no feedback until the end, flag &amp; navigate between questions. Domain-weighted like the real blueprint.</span></button>
-    <button class="mode" onclick="startMode('full')"><b>Full mock — all 70 questions, 140 min</b><span>The entire bank under exam conditions.</span></button>
+    <button class="mode" onclick="startMode('full')"><b>Full mock — all 107 questions, 214 min</b><span>The entire bank under exam conditions.</span></button>
     <button class="mode" onclick="startMode('quick')"><b>Quick drill — 10 questions, untimed</b><span>Instant feedback with explanations after each answer.</span></button>
     <div style="display:flex;gap:10px;align-items:center;margin:4px 0 2px">
       <select id="domSel">${Object.entries(DOMAINS).map(([d,n])=>`<option value="${d}">D${d} · ${n}</option>`).join("")}</select>
@@ -385,7 +504,7 @@ function home(){
 function startMode(m){
   mode=m;idx=0;answers=[];flags=new Set();revealed=new Set();
   if(m==='exam'){order=weightedDraw(25);deadline=Date.now()+50*60*1000;}
-  else if(m==='full'){order=shuffle([...BANK.keys()]);deadline=Date.now()+140*60*1000;}
+  else if(m==='full'){order=shuffle([...BANK.keys()]);deadline=Date.now()+214*60*1000;}
   else if(m==='quick'){order=weightedDraw(10);deadline=null;}
   else{drillDom=+document.getElementById('domSel').value;order=shuffle(BANK.map((q,i)=>q.d===drillDom?i:-1).filter(i=>i>=0));deadline=null;}
   answers=new Array(order.length).fill(null);

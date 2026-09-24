@@ -13,8 +13,8 @@ Guidance for Claude Code when working in this repository.
 certification. The entire app is a single `index.html` with inlined CSS and JS. No build step,
 no dependencies, no network calls, no backend.
 
-- **70 questions**: 60 single-answer + 10 multiple-response
-- **Four modes**: exam simulation (25 q / 50 min), full mock (70 q / 140 min), quick drill
+- **107 questions**: 92 single-answer + 15 multiple-response
+- **Four modes**: exam simulation (25 q / 50 min), full mock (107 q / 214 min), quick drill
   (10 q, untimed, immediate feedback), domain drill (all questions in one domain, untimed)
 - Scaled scoring 100–1000 against the real **720** pass mark
 - Option order reshuffled per attempt; attempt history in `localStorage`
@@ -25,7 +25,7 @@ no dependencies, no network calls, no backend.
 
 | Path | Purpose |
 | --- | --- |
-| `index.html` | The whole app (~63 KB). Question bank is the `BANK` array, lines ~109–324. |
+| `index.html` | The whole app. Question bank is the `BANK` array. |
 | `tools/make_guide.js` | Generates `docs/CCA-F_Study_Guide.docx`. Needs `npm install docx`. Writes to `docs/` via `__dirname`, so cwd doesn't matter. |
 | `docs/CCA-F_Study_Guide.docx` | Generated study guide. Regenerate after editing the script. |
 | `CHEATSHEET.md` | Last-minute cram sheet. Hand-written; **not** generated from the bank. |
@@ -112,7 +112,7 @@ every option therefore scores **0**, by design — shotgunning must not pay. `pi
 selections at `q.m.length`, evicting the oldest, so "select all" isn't reachable in the UI.
 
 Scaled score: `100 + (points / n) × 900` where **`n` is the question count of that attempt**,
-not 70. A 25-question exam is scored out of 25.
+not the bank size. A 25-question exam is scored out of 25.
 
 ### Question selection
 
@@ -122,8 +122,8 @@ each share and subtracted the surplus from domain 1, which systematically under-
 heaviest domain (24% drawn vs 27% target at n=25). If a domain can't supply its allocation,
 the shortfall is backfilled from the remaining pool.
 
-Note the bank is **not** distributed to the blueprint (D1 has 13, D2 has 9). Weighting is
-applied at draw time, so exam mode is blueprint-accurate while full mock over-samples D5.
+The bank is now shaped close to the blueprint (D1 26%, D2 19%, D3 20%, D4 19%, D5 17%),
+and weighting is also applied at draw time.
 
 ### State and functions
 
