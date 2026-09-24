@@ -1,248 +1,224 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
+
+> Verified against `index.html` on 2026-09-24. If you change the code, re-verify the
+> claims below — an earlier version of this file described functions that never existed.
 
 ---
 
 ## Project overview
 
-**CCA-F Exam Simulator** — a self-contained practice exam for the Claude Certified Architect – Foundations certification. The entire application is a single `index.html` file with embedded JavaScript and CSS, no build step or dependencies required.
+**CCA-F Exam Simulator** — a practice exam for the Claude Certified Architect – Foundations
+certification. The entire app is a single `index.html` with inlined CSS and JS. No build step,
+no dependencies, no network calls, no backend.
 
-**Key facts:**
-- 70 practice questions across 5 domains (Agentic Architecture, Claude Code, Prompt Engineering, Tool Design, Context Management)
-- Four exam modes: exam simulation (25 questions, 50 min), full mock (70 questions, 140 min), quick drill (10 questions, untimed), domain drill (single domain)
-- Multiple-response questions use partial grading: `(correct − incorrect) ÷ required`, floored at zero
-- Attempt history persists in browser `localStorage` (per-device, not synced)
-- Exam scoring scaled 100–1000 with 720 passing mark
-- Questions and scenarios shuffled on each attempt so you can't memorize answer positions
+- **70 questions**: 60 single-answer + 10 multiple-response
+- **Four modes**: exam simulation (25 q / 50 min), full mock (70 q / 140 min), quick drill
+  (10 q, untimed, immediate feedback), domain drill (all questions in one domain, untimed)
+- Scaled scoring 100–1000 against the real **720** pass mark
+- Option order reshuffled per attempt; attempt history in `localStorage`
 
 ---
 
-## Structure and files
+## Files
 
-| File/Directory | Purpose |
+| Path | Purpose |
 | --- | --- |
-| `index.html` | The entire simulator — ~62KB self-contained HTML/CSS/JS. Question bank embedded as the `BANK` JavaScript array. |
-| `tools/make_guide.js` | Node.js script that generates `docs/CCA-F_Study_Guide.docx` from embedded data structures. Requires `npm install docx`. |
-| `docs/CCA-F_Study_Guide.docx` | Generated Word document study guide covering all five domains, exam logistics, and practice questions. Regenerate after question bank changes. |
-| `firebase.json` | Firebase Hosting config: serves index.html with no-cache headers and clean URLs. |
-| `.firebaserc` | Firebase project ID (placeholder; set yours before deploying). |
-| `DEPLOY.md` | Hosting instructions for Netlify, Firebase, local network, or offline. |
-| `README.md` | Public documentation and question sourcing attribution. |
+| `index.html` | The whole app (~63 KB). Question bank is the `BANK` array, lines ~109–324. |
+| `tools/make_guide.js` | Generates `docs/CCA-F_Study_Guide.docx`. Needs `npm install docx`. Writes to `docs/` via `__dirname`, so cwd doesn't matter. |
+| `docs/CCA-F_Study_Guide.docx` | Generated study guide. Regenerate after editing the script. |
+| `CHEATSHEET.md` | Last-minute cram sheet. Hand-written; **not** generated from the bank. |
+| `DEPLOY.md` / `PUSH-TO-GITHUB.md` | Hosting and git instructions |
+| `firebase.json`, `.firebaserc` | Firebase Hosting config (project ID is a placeholder) |
 
 ---
 
-## Running and testing
-
-### Test the simulator locally
+## Running
 
 ```bash
-# Option 1: Direct browser file open
-open index.html
-
-# Option 2: Serve on local network (for phone/tablet testing)
-python3 -m http.server 8000
-# Then visit http://<your-lan-ip>:8000 from any device on the same Wi-Fi
+open index.html                 # just open it
+python3 -m http.server 8000     # or serve for phone/tablet testing
 ```
 
-The app requires no build step, no npm dependencies, and no backend. It's fully functional in any browser, offline included.
-
-### Regenerate the study guide (Word document)
+Regenerate the study guide:
 
 ```bash
-cd tools
-npm install docx
-node make_guide.js
+cd tools && npm install docx && node make_guide.js
 ```
-
-This writes `docs/CCA-F_Study_Guide.docx` from the hardcoded structures in `make_guide.js`. Regenerate after updating question text, domain weights, or exam logistics in the script.
 
 ---
 
-## Code architecture
+## Architecture
 
-### Question bank and data structure
+### Domains — official blueprint order
 
-All 70 questions are embedded in `index.html` as the `BANK` array. Each question object:
-
-```javascript
-{
-  s: "scenario_name",  // One of: MA, CI, CS, CG, DX, DP (6 total)
-  d: domain_number,    // 1–5 (mapped to DOMAINS constant)
-  q: "Question text",
-  o: ["Option A", "Option B", "Option C", "Option D"],  // 4 options
-  a: answer_index,     // 0–3, index of correct answer(s)
-  e: "Explanation text"
-}
-```
-
-For **multiple-response questions**, the `a` value is an array of indices instead: `a: [0, 2]` means select both option 0 and option 2.
-
-### Domains and weights
+Domain numbers follow the published CCAR-F v1.0 blueprint. **They are not ordered by weight.**
+An earlier version of this repo numbered them by descending weight, which mislabelled D2/D3/D4.
 
 ```javascript
 const DOMAINS = {
-  1: "Agentic Architecture & Orchestration",
-  2: "Claude Code Configuration & Workflows",
-  3: "Prompt Engineering & Structured Output",
-  4: "Tool Design & MCP Integration",
-  5: "Context Management & Reliability"
+  1: "Agentic Architecture & Orchestration",     // 27%
+  2: "Tool Design & MCP Integration",            // 18%
+  3: "Claude Code Configuration & Workflows",    // 20%
+  4: "Prompt Engineering & Structured Output",   // 20%
+  5: "Context Management & Reliability"          // 15%
 };
-
-const WEIGHT = {
-  1: .27,  // 27% → ~16 questions
-  2: .20,  // 20% → ~12 questions
-  3: .20,  // 20% → ~12 questions
-  4: .18,  // 18% → ~11 questions
-  5: .15   // 15% → ~9 questions
-};
+const WEIGHT = {1:.27, 2:.18, 3:.20, 4:.20, 5:.15};
 ```
 
-When the "exam simulation" mode runs, it draws 25 questions weighted by these percentages.
+### Scenario constants
 
-### Scoring logic
+Declared on one line above `BANK`; questions reference the constant, not a string literal.
 
-**Single-answer questions:** 1 point if correct, 0 if wrong.
+```javascript
+MA = "Multi-Agent Research System"      CI = "Claude Code in CI/CD"
+CS = "Customer Support Agent"           CG = "Code Generation with Claude Code"
+DX = "Structured Data Extraction"       DP = "Developer Productivity Tools"
+```
 
-**Multiple-response questions:** `max(0, (correct − incorrect) ÷ required)`. Example: if 3 answers are required and you select 2 correct + 1 wrong, you score `(2 − 1) ÷ 3 = 0.33` points.
+### Question schema
 
-**Exam score:** `100 + (total_points ÷ 70) × 900`, rounded and scaled to stay in 100–1000 range.
+**Single-answer** — `a` is the index of the one correct option:
 
-### UI state management
+```javascript
+{s:CS, d:1, q:"Question text…",
+ o:["Option A","Option B","Option C","Option D"],
+ a:2, e:"Why the answer is right and the others aren't."}
+```
 
-- Exam state is held in memory (not persisted until submission)
-- After submission, the attempt record is saved to `localStorage` under key `attempts`
-- localStorage structure: `attempts` is a JSON array of attempt objects, each containing attempt timestamp, score, mode, answers, and full results
-- Question shuffling happens at mode start (Fisher-Yates shuffle in the `shuffle` function)
+**Multiple-response** — uses a **separate `m` key** holding an array of correct indices.
+There is no `a` key. `isMR()` tests `Array.isArray(q.m)`, so a question written with
+`a: [0,2]` would be treated as single-answer and score as wrong.
 
-### Key functions in index.html
+```javascript
+{s:CS, d:5, q:"Which conditions should trigger escalation?",
+ o:["…","…","…","…","…","…"],      // MR items carry 5–6 options
+ m:[0,1,2], e:"…"}
+```
 
-- `shuffle(arr)` — Fisher-Yates shuffle of the question array
-- `selectAnswer(qIndex, optIndex)` — Record an answer selection
-- `submitAttempt()` — Score the exam, save to localStorage, show results
-- `renderApp()` — Main render function that outputs the UI based on current state
-- `calculateScore(answers)` — Compute scaled score and per-domain breakdown
-- `getReviewItems()` — Build the review section showing every missed/partial question
+The UI reads `q.m.length` to render "select N", so it must match the intended count.
+
+### Scoring
+
+```javascript
+scoreOf(q, ans)
+  single-answer:      ans === q.a ? 1 : 0
+  multiple-response:  max(0, (hits − misses) / q.m.length)
+```
+
+`hits` = chosen indices that are in `q.m`; `misses` = chosen indices that aren't. Selecting
+every option therefore scores **0**, by design — shotgunning must not pay. `pick()` also caps
+selections at `q.m.length`, evicting the oldest, so "select all" isn't reachable in the UI.
+
+Scaled score: `100 + (points / n) × 900` where **`n` is the question count of that attempt**,
+not 70. A 25-question exam is scored out of 25.
+
+### Question selection
+
+`weightedDraw(n)` uses **largest-remainder apportionment**: floor each domain's share, then
+hand out the leftover seats to the largest fractional remainders. An earlier version rounded
+each share and subtracted the surplus from domain 1, which systematically under-sampled the
+heaviest domain (24% drawn vs 27% target at n=25). If a domain can't supply its allocation,
+the shortfall is backfilled from the remaining pool.
+
+Note the bank is **not** distributed to the blueprint (D1 has 13, D2 has 9). Weighting is
+applied at draw time, so exam mode is blueprint-accurate while full mock over-samples D5.
+
+### State and functions
+
+Module-scoped state: `mode`, `order` (bank indices for this attempt), `perm` (per-question
+shuffled option order), `idx`, `answers`, `flags`, `revealed`, `deadline`, `tick`, `drillDom`.
+
+`answers[i]` is a number for single-answer, an array for multiple-response, `null` if untouched.
+
+Real functions — there is no `selectAnswer`, `submitAttempt`, `renderApp`, `calculateScore`,
+or `getReviewItems`:
+
+| Function | Role |
+| --- | --- |
+| `home()` | Mode-select screen and attempt history |
+| `startMode(m)` | Build `order`/`perm`, set timer, reset state |
+| `weightedDraw(n)` | Blueprint-weighted question selection |
+| `render()` | Single render function for the question view |
+| `pick(i)` | Record a selection (toggles for MR, caps at `m.length`) |
+| `reveal()` | Quick-drill "Check answer" for MR items |
+| `scoreOf(q, ans)` | Score one question, 0–1 |
+| `answered(i)` | Whether question `i` has a usable answer |
+| `go(i)`, `toggleFlag()`, `trySubmit()` | Navigation, flagging, submit guard |
+| `results(timedOut)` | Score, persist history, render breakdown and review |
+
+### localStorage
+
+One key: **`ccaf_hist`** — a JSON array of `{t, m, r, n, s}` (timestamp, mode label, raw score,
+question count, scaled score), capped at the last 12 attempts. Wrapped in try/catch; failure is
+non-fatal. Domain drills are deliberately not recorded.
 
 ---
 
-## Common development tasks
+## Common tasks
 
-### Adding or editing questions
+### Adding a question
 
-1. Open `index.html` in an editor
-2. Find the `BANK = [...]` array (starts around line 109 in the current file)
-3. Add or modify question objects with structure shown above
-4. Save and test: open in browser to verify the new question appears and scoring works
-5. If you modify question text or add questions, regenerate the study guide: `cd tools && node make_guide.js`
+1. Add an object to `BANK` in `index.html` using the schema above
+2. Use the scenario **constant** (`MA`, not `"Multi-Agent Research System"`)
+3. For MR, use `m:[…]` — never `a:[…]`
+4. Verify before committing (see below)
 
-**Maintain domain balance:** After changes, verify the exam simulation mode still draws the right proportion of questions from each domain. Spot-check by running multiple simulations and viewing the per-domain breakdown.
+### Verifying after changes
 
-### Updating exam logistics or study guide
-
-Study guide data is hardcoded in `tools/make_guide.js`. If you update:
-- Exam cost, retake windows, or validity
-- Domain descriptions
-- Scenario details
-- Practice questions or exam tips
-
-Edit those values directly in `make_guide.js`, then regenerate: `node make_guide.js`.
-
-### Testing mobile experience
-
-The app is mobile-responsive and PWA-capable (home-screen icon support). Test on actual devices:
+There's no test suite; the app is evaluated in Node with a DOM stub. Minimum checks:
 
 ```bash
-python3 -m http.server 8000
-# Open http://<your-lan-ip>:8000 on a phone/tablet on the same Wi-Fi
-# iOS: Share → Add to Home Screen
-# Android: ⋮ menu → Add to Home screen
+# syntax
+node -e "const s=require('fs').readFileSync('index.html','utf8');
+         require('fs').writeFileSync('/tmp/c.js',s.match(/<script>([\s\S]*)<\/script>/)[1])" \
+  && node --check /tmp/c.js
 ```
 
-Check that:
-- Touch targets are large enough (40×40 px on mobile, enforced in CSS @media)
-- Scrolling is smooth and text is readable at small sizes
-- Option selection and timer display work without layout shift
+Then confirm: bank size, every question schema-valid, no duplicate stems, domain counts,
+MR partial-credit math (all-correct = 1, all-options = 0, unanswered = 0), draw weighting
+across repeated exam sims, and a full perfect run scoring 1000.
 
-### Deploying
+### Regenerating the study guide
 
-See `DEPLOY.md` for detailed instructions. Quick versions:
-
-**Firebase Hosting (free Spark tier):**
-```bash
-firebase login
-# Set your project ID in .firebaserc
-firebase deploy --only hosting
-```
-
-**Netlify Drop (no CLI):**
-1. Go to https://app.netlify.com/drop
-2. Drag this folder onto the page
-3. Get an instant live URL
-
-**Local network only (no internet):**
-```bash
-python3 -m http.server 8000
-```
+Exam logistics and domain content are hard-coded in `tools/make_guide.js`. Edit there, then
+`node make_guide.js`. Verify by rendering: convert to PDF with LibreOffice and view the pages.
 
 ---
 
-## Technical decisions and constraints
+## Constraints
 
-### Single HTML file (no build)
-
-The entire application is intentionally one self-contained `.html` file. This means:
-- No package.json, webpack, or build pipeline for the app itself
-- All JavaScript and CSS are inlined (no external requests except PWA icons, which are optional)
-- Questions and data are hardcoded, not fetched from an API
-- Simplicity and reliability are the goal — no framework churn, no dependency vulnerabilities
-
-The study guide generator (`make_guide.js`) is separate and optional — you can edit questions without regenerating it, and regenerate it only when needed.
-
-### No backend, no tracking
-
-All state lives in the browser:
-- Attempt history saved to `localStorage` only (never sent anywhere)
-- No analytics, no server logs
-- Privacy by design: open offline, no network calls
-- The trade-off: attempt history doesn't sync between devices
-
-### localStorage keys
-
-- `attempts` — JSON array of attempt records for this device
-
-Clearing browser data or using private browsing erases history. This is intentional for privacy; if you need cross-device sync, the app would need a backend (e.g., Firebase Realtime DB or Supabase).
+- **Keep it one file.** No framework, no bundler, no external requests. Simplicity is the point.
+- **No backend, no tracking.** All state is client-side; nothing is transmitted.
+- **Light mode.** `:root { color-scheme: light }` — it's also published as a Cowork artifact,
+  which renders light.
+- Mobile: tap targets enlarge under `@media(max-width:620px)`; web-app meta tags allow
+  Add to Home Screen.
 
 ---
 
-## Before publishing or going public
+## Exam facts (verify before relying on these)
 
-1. **Question sourcing attribution:** `README.md` notes that some questions are adapted from community material. If making the repo public, confirm the licence terms of upstream sources. Material without a declared licence is "all rights reserved" by default.
-2. **Firebase project ID:** The `.firebaserc` placeholder must be replaced with an actual Firebase project ID before deployment.
-3. **Test across browsers and devices:** Exam simulators must be reliable. Test on current versions of Chrome, Safari, Firefox, and Edge, and on iOS and Android.
-4. **Attempt history edge cases:** Verify localStorage persistence works correctly on private browsing, after browser data wipe, and across Safari's ITP restrictions if applicable.
+Confirmed against Anthropic's certification FAQ on **2026-09-24**:
 
----
+- 60 questions, 120 min (~135 min seat time), scaled 100–1000, **720 to pass**
+- Multiple-choice **and** multiple-response; each item states how many to select
+- 4 scenarios drawn from a pool of 6
+- $125 per attempt; Select/Preferred/Global Premier partners get 50% off (Global Premier 100%
+  through 2026-12-31)
+- Retakes: 14 / 30 / 90 days after 1st / 2nd / 3rd fail; max 4 per rolling 12 months
+- Certification valid 12 months; renewal is a free non-proctored assessment
+- **Reschedule or cancel at least 48 hours ahead** — inside that window, or a no-show, forfeits
+  the fee (this changed from 24 hours; re-check before asserting it)
+- Eligibility: Claude Partner Network organizations only, company email on a recognized domain
+- Delivery: Pearson VUE, OnVUE online or test centre. OnVUE unavailable for IDs from Belarus,
+  Cuba, North Korea, Russia, Syria and restricted Ukraine regions; Iran suspended since
+  2026-09-08
+- The official practice exam was **retired** at the June 30 2026 Pearson migration
 
-## Useful quick reference
+## Attribution
 
-**Exam blueprint (domain distribution in a 25-question exam simulation):**
-- Domain 1 (27%): ~7 questions
-- Domain 2 (20%): ~5 questions
-- Domain 3 (20%): ~5 questions
-- Domain 4 (18%): ~4–5 questions
-- Domain 5 (15%): ~3–4 questions
-
-**Scenario codes:**
-- MA = Multi-Agent Research System
-- CI = Claude Code in CI/CD
-- CS = Customer Support Agent
-- CG = Code Generation with Claude Code
-- DX = Structured Data Extraction
-- DP = Developer Productivity Tools
-
-**Color palette (CSS custom properties in `:root`):**
-- `--accent: #C15F3C` (terracotta, used for headers and highlights)
-- `--ok: #2e7d4f` (green, for correct answers)
-- `--bad: #c0392b` (red, for wrong answers)
-- `--muted: #7a6f66` (gray, for secondary text)
+Questions are original or adapted from community study material (see `README.md`). The repo
+contains **no real exam content**. Not affiliated with Anthropic. Confirm upstream licences
+before making this repository public.

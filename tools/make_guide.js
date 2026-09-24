@@ -84,6 +84,8 @@ kids.push(table(
     ["Retakes", "14 days after a 1st fail, 30 after a 2nd, 90 after a 3rd; max 4 attempts per rolling 12 months, full fee each time"],
     ["Validity", "12 months. Renewal is a free non-proctored assessment; if it lapses, you retake the full paid exam"],
     ["Recommended experience", "6+ months hands-on with the Claude API, Agent SDK, Claude Code, and MCP"],
+    ["Reschedule / cancel", "At least 48 hours before your appointment. Inside 48 hours, or a no-show, forfeits the fee. Cancelling in Pearson does NOT trigger a refund — email certifications-support@anthropic.com"],
+    ["Regional limits", "OnVUE online proctoring unavailable for IDs from Belarus, Cuba, North Korea, Russia, Syria and restricted Ukraine regions (test centre instead). Iran suspended entirely since Sept 8, 2026"],
     ["Registration", "anthropic-partners.skilljar.com — register and pay, then schedule via Pearson. Registration stays valid 5 years"]
   ],
   [2100, 7260]

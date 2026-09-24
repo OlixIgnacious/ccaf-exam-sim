@@ -339,11 +339,26 @@ function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;");}
 function weightedDraw(n){
   const byDom={};BANK.forEach((q,i)=>{(byDom[q.d]=byDom[q.d]||[]).push(i);});
   for(const d in byDom)shuffle(byDom[d]);
-  const take=[],counts={};let total=0;
-  for(const d in WEIGHT){counts[d]=Math.round(WEIGHT[d]*n);total+=counts[d];}
-  counts[1]+=n-total;
-  for(const d in counts){take.push(...(byDom[d]||[]).slice(0,counts[d]));}
-  while(take.length<n){const extra=BANK.findIndex((q,i)=>!take.includes(i));if(extra<0)break;take.push(extra);}
+  // largest-remainder apportionment so the rounding remainder is spread fairly,
+  // not always subtracted from domain 1
+  const raw=[],counts={};let floorSum=0;
+  for(const d in WEIGHT){
+    const exact=WEIGHT[d]*n, f=Math.floor(exact);
+    counts[d]=f; floorSum+=f; raw.push({d,rem:exact-f});
+  }
+  raw.sort((a,b)=>b.rem-a.rem);
+  for(let i=0;i<n-floorSum;i++)counts[raw[i%raw.length].d]++;
+  // cap at what each domain can actually supply, redistribute any shortfall
+  const take=[];let short=0;
+  for(const d in counts){
+    const pool=byDom[d]||[], want=counts[d], got=Math.min(want,pool.length);
+    take.push(...pool.slice(0,got)); short+=want-got;
+  }
+  if(short>0){
+    const used=new Set(take);
+    const spare=shuffle(BANK.map((_,i)=>i).filter(i=>!used.has(i)));
+    take.push(...spare.slice(0,short));
+  }
   return shuffle(take.slice(0,n));
 }
 
