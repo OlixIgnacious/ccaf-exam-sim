@@ -14,8 +14,9 @@ certification. The entire app is a single `index.html` with inlined CSS and JS. 
 no dependencies, no network calls, no backend.
 
 - **107 questions**: 92 single-answer + 15 multiple-response
-- **Four modes**: exam simulation (25 q / 50 min), full mock (107 q / 214 min), quick drill
-  (10 q, untimed, immediate feedback), domain drill (all questions in one domain, untimed)
+- **Five modes**: full mock (60 q / 120 min — the real exam shape), half mock (25 q / 50 min),
+  marathon (all 107 q / 214 min), quick drill (10 q, untimed, immediate feedback), domain drill
+  (all questions in one domain, untimed)
 - Scaled scoring 100–1000 against the real **720** pass mark
 - Option order reshuffled per attempt; attempt history in `localStorage`
 
@@ -150,9 +151,16 @@ or `getReviewItems`:
 
 ### localStorage
 
-One key: **`ccaf_hist`** — a JSON array of `{t, m, r, n, s}` (timestamp, mode label, raw score,
-question count, scaled score), capped at the last 12 attempts. Wrapped in try/catch; failure is
-non-fatal. Domain drills are deliberately not recorded.
+Two keys:
+
+- **`ccaf_hist`** — a JSON array of `{t, m, r, n, s}` (timestamp, mode label, raw score,
+  question count, scaled score), capped at the last 12 attempts. Domain drills aren't recorded.
+- **`ccaf_seen`** — bank indices used in recent 60 q / 25 q mocks, capped at the last 140.
+  `weightedDraw` puts unseen questions first within each domain, so consecutive mocks overlap
+  as little as the bank allows (13 of 60 between the first two). Cleared by the reset link on
+  the home screen.
+
+Both are wrapped in try/catch; failure is non-fatal.
 
 ---
 
